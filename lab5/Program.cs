@@ -62,13 +62,15 @@ namespace lab5
 
             // smtp-сервер и порт
             SmtpClient smtp = new SmtpClient("smtp.mail.ru", 2525);
-            // логин и пароль
+            // аутентификационные данные
             smtp.Credentials = new NetworkCredential(opts.From, opts.Password);
+            // использование протокола ssl
             smtp.EnableSsl = true;
             
             // отправляем
             smtp.Send(m);
             Console.Write("Отправлено!");
+            smtp.Dispose();
         }
     }
 }
