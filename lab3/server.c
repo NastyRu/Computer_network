@@ -27,13 +27,14 @@ void catch_sigp(int sig_numb)
   signal(sig_numb, catch_sigp);
 	for (int i = 0; i < NUM_THREADS; i++)
 	{
-		pthread_detach(threads[i]);
+		pthread_exit(threads[i]);
 	}
 	// Закрываем сокет
   close(listensock);
 	exit(errno);
 }
 
+// Чтение файла
 char *read_file(char *filename)
 {
 	char *fcontent = NULL;
@@ -62,6 +63,11 @@ char *read_file(char *filename)
 		rewind(fp);
 
 		fcontent = calloc(fsize, sizeof(char));
+    if (fcontent == NULL)
+    {
+      printf("%s", strerror(errno));
+      exit(errno);
+    }
 		fread(fcontent, 1, fsize, fp);
 
 		fclose(fp);
@@ -70,6 +76,7 @@ char *read_file(char *filename)
 	return fcontent;
 }
 
+// Формирование ответа на сообщение клиента
 char *response_message(char *filename)
 {
   char *sendline = calloc(MSG_SIZE, sizeof(char));
@@ -103,6 +110,7 @@ char *response_message(char *filename)
   return sendline;
 }
 
+// Получение запроса клиента
 char *parse_client_message(char *message)
 {
 	char *method = strtok(message, " ");
@@ -111,6 +119,7 @@ char *parse_client_message(char *message)
 	return url;
 }
 
+// Увеличение числа посещений в определенный день
 char *replace_word(const char *s, const char *before_word)
 {
   char *result = NULL;
@@ -126,6 +135,11 @@ char *replace_word(const char *s, const char *before_word)
   }
 
   result = (char*)malloc(strlen(s) + 1);
+  if (result == NULL)
+  {
+    printf("%s", strerror(errno));
+    exit(errno);
+  }
 
 	i += 2;
 	cnt = i;
@@ -161,6 +175,7 @@ char *replace_word(const char *s, const char *before_word)
   return result;
 }
 
+// Функция обновления ежедневной статистики по дням недели
 void update_statistic()
 {
 	time_t t = time(NULL);
@@ -183,7 +198,8 @@ void update_statistic()
 	}
 	else
 	{
-		return;
+    printf("%s", strerror(errno));
+    exit(errno);
 	}
 
 	char *new_fcontent = NULL;
@@ -191,7 +207,6 @@ void update_statistic()
 	switch (week_day)
 	{
     case 1:
-
 			new_fcontent = replace_word(fcontent, "Monday");
 			break;
     case 2:
@@ -199,7 +214,6 @@ void update_statistic()
 			break;
     case 3:
 			new_fcontent = replace_word(fcontent, "Wednesday");
-      printf("1\n");
 			break;
 		case 4:
 			new_fcontent = replace_word(fcontent, "Thursday");
@@ -222,6 +236,11 @@ void update_statistic()
 		fprintf(fp, "%s", new_fcontent);
 		fclose(fp);
 	}
+  else
+  {
+    printf("%s", strerror(errno));
+    exit(errno);
+  }
 
 	free(new_fcontent);
 }
@@ -233,10 +252,10 @@ void *client_handler(void *my_socket)
   // Получение дескриптора сокета
   int read_size;
   int socket = *(int*)my_socket;
-  char *message = NULL, client_message[2000];
+  char *message = NULL, client_message[MSG_SIZE];
 
   // Получаем запросы от клиента
-  read_size = recv(socket, client_message, 2000, 0);
+  read_size = recv(socket, client_message, MSG_SIZE, 0);
   client_message[read_size] = '\0';
   printf("%s\n", client_message);
 
@@ -254,6 +273,7 @@ void *thread_function(void *arg)
 {
   while (1)
   {
+    // Работа с общими ресурсами
     pthread_mutex_lock(&mutex);
     int *pclient = pop();
     pthread_mutex_unlock(&mutex);
@@ -289,7 +309,7 @@ int main(int argc, char ** argv)
   {
 		for (int i = 0; i < NUM_THREADS; i++)
 	  {
-	    pthread_detach(threads[i]);
+	    pthread_exit(threads[i]);
 	  }
     printf("%s", strerror(errno));
     return errno;
@@ -332,11 +352,11 @@ int main(int argc, char ** argv)
 
 	for (int i = 0; i < NUM_THREADS; i++)
   {
-    pthread_detach(threads[i]);
+    pthread_exit(threads[i]);
   }
 
   // Закрываем сокет
   close(listensock);
 
-  return errno;
+  return 0;
 }
